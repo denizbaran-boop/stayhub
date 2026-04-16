@@ -8,6 +8,7 @@ import RegisterPage from './pages/RegisterPage';
 import PropertyDetailPage from './pages/PropertyDetailPage';
 import CreateListingPage from './pages/CreateListingPage';
 import EditListingPage from './pages/EditListingPage';
+import GuestDashboard from './pages/GuestDashboard';
 import HostDashboard from './pages/HostDashboard';
 import SearchResultsPage from './pages/SearchResultsPage';
 
@@ -44,6 +45,14 @@ const AppRoutes = () => {
           element={
             <ProtectedRoute requiredRole="host">
               <EditListingPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard/guest"
+          element={
+            <ProtectedRoute>
+              <GuestDashboard />
             </ProtectedRoute>
           }
         />
