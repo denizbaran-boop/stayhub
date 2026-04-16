@@ -6,6 +6,7 @@ const morgan = require('morgan');
 
 const authRoutes = require('./routes/auth');
 const propertyRoutes = require('./routes/properties');
+const searchRoutes = require('./routes/search');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
@@ -18,6 +19,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/properties', propertyRoutes);
+app.use('/api/search', searchRoutes);
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
