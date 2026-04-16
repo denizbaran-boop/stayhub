@@ -7,6 +7,8 @@ const morgan = require('morgan');
 const authRoutes = require('./routes/auth');
 const propertyRoutes = require('./routes/properties');
 const bookingRoutes = require('./routes/bookings');
+const reviewRoutes = require('./routes/reviews');
+const promotionRoutes = require('./routes/promotions');
 const availabilityRoutes = require('./routes/availability');
 const searchRoutes = require('./routes/search');
 const errorHandler = require('./middleware/errorHandler');
@@ -22,6 +24,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/auth', authRoutes);
 app.use('/api/properties', propertyRoutes);
 app.use('/api/bookings', bookingRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/promotions', promotionRoutes);
 app.use('/api/availability', availabilityRoutes);
 app.use('/api/search', searchRoutes);
 
