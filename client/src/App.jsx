@@ -6,6 +6,8 @@ import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import PropertyDetailPage from './pages/PropertyDetailPage';
+import CreateListingPage from './pages/CreateListingPage';
+import EditListingPage from './pages/EditListingPage';
 import SearchResultsPage from './pages/SearchResultsPage';
 
 const ProtectedRoute = ({ children, requiredRole }) => {
@@ -28,6 +30,22 @@ const AppRoutes = () => {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/search" element={<SearchResultsPage />} />
         <Route path="/properties/:id" element={<PropertyDetailPage />} />
+        <Route
+          path="/create-listing"
+          element={
+            <ProtectedRoute requiredRole="host">
+              <CreateListingPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/edit-listing/:id"
+          element={
+            <ProtectedRoute requiredRole="host">
+              <EditListingPage />
+            </ProtectedRoute>
+          }
+        />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>
