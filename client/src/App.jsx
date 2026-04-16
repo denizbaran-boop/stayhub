@@ -8,6 +8,7 @@ import RegisterPage from './pages/RegisterPage';
 import PropertyDetailPage from './pages/PropertyDetailPage';
 import CreateListingPage from './pages/CreateListingPage';
 import EditListingPage from './pages/EditListingPage';
+import HostDashboard from './pages/HostDashboard';
 import SearchResultsPage from './pages/SearchResultsPage';
 
 const ProtectedRoute = ({ children, requiredRole }) => {
@@ -43,6 +44,14 @@ const AppRoutes = () => {
           element={
             <ProtectedRoute requiredRole="host">
               <EditListingPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard/host"
+          element={
+            <ProtectedRoute requiredRole="host">
+              <HostDashboard />
             </ProtectedRoute>
           }
         />
