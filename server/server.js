@@ -16,7 +16,7 @@ const errorHandler = require('./middleware/errorHandler');
 const app = express();
 
 app.use(helmet());
-app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:5173', credentials: true }));
+app.use(cors({ origin: true, credentials: true }));
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -28,6 +28,21 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/promotions', promotionRoutes);
 app.use('/api/availability', availabilityRoutes);
 app.use('/api/search', searchRoutes);
+
+app.get('/', (req, res) => res.json({
+  name: 'StayHub API',
+  version: '1.0.0',
+  endpoints: {
+    health: 'GET /api/health',
+    auth: 'POST /api/auth/login, POST /api/auth/register, GET /api/auth/profile',
+    properties: 'GET /api/properties',
+    bookings: 'GET /api/bookings/guest, GET /api/bookings/host',
+    reviews: 'GET /api/reviews/property/:id',
+    promotions: 'GET /api/promotions',
+    availability: 'GET /api/availability/:propertyId',
+    search: 'GET /api/search',
+  },
+}));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
