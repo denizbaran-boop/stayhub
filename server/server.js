@@ -6,6 +6,7 @@ const morgan = require('morgan');
 
 const authRoutes = require('./routes/auth');
 const propertyRoutes = require('./routes/properties');
+const availabilityRoutes = require('./routes/availability');
 const searchRoutes = require('./routes/search');
 const errorHandler = require('./middleware/errorHandler');
 
@@ -19,6 +20,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/properties', propertyRoutes);
+app.use('/api/availability', availabilityRoutes);
 app.use('/api/search', searchRoutes);
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
