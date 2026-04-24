@@ -30,8 +30,25 @@ export const AuthProvider = ({ children }) => {
     initAuth();
   }, []);
 
+  // Returns either { user } on direct login or { twoFactorRequired, challengeToken, demoCode } when 2FA is needed
   const login = async (email, password) => {
     const res = await api.post('/auth/login', { email, password });
+    if (res.data.two_factor_required) {
+      return {
+        twoFactorRequired: true,
+        challengeToken: res.data.challenge_token,
+        demoCode: res.data.demo_code,
+      };
+    }
+    const { token, user: userData } = res.data;
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(userData));
+    setUser(userData);
+    return { user: userData };
+  };
+
+  const verifyTwoFactor = async (challengeToken, code) => {
+    const res = await api.post('/auth/verify-2fa', { challenge_token: challengeToken, code });
     const { token, user: userData } = res.data;
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(userData));
@@ -60,7 +77,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, loading, login, verifyTwoFactor, register, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

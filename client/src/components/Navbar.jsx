@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { FiMenu, FiUser, FiHome, FiLogOut, FiGrid, FiPlusSquare } from 'react-icons/fi';
+import { FiMenu, FiUser, FiHome, FiLogOut, FiGrid, FiPlusSquare, FiMessageCircle, FiShield, FiStar } from 'react-icons/fi';
+import NotificationsBell from './NotificationsBell';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
@@ -36,12 +37,19 @@ const Navbar = () => {
         </Link>
 
         <div className="navbar-actions">
+          <Link to="/featured" className="navbar-host-link" style={{ background: 'transparent' }}>
+            <FiStar size={16} /> Featured
+          </Link>
+          <Link to="/map-search" className="navbar-host-link" style={{ background: 'transparent' }}>
+            Map
+          </Link>
           {user?.role === 'host' && (
             <Link to="/create-listing" className="navbar-host-link">
               <FiPlusSquare size={16} />
               Add Listing
             </Link>
           )}
+          {user && <NotificationsBell />}
 
           <div className="navbar-user-menu" ref={menuRef}>
             <button
@@ -87,6 +95,14 @@ const Navbar = () => {
                           <FiPlusSquare size={15} /> Add Listing
                         </Link>
                       </>
+                    ) : user.role === 'admin' ? (
+                      <Link
+                        to="/admin"
+                        onClick={() => setMenuOpen(false)}
+                        className="navbar-dropdown-item"
+                      >
+                        <FiShield size={15} /> Admin Console
+                      </Link>
                     ) : (
                       <Link
                         to="/dashboard/guest"
@@ -96,6 +112,27 @@ const Navbar = () => {
                         <FiHome size={15} /> My Bookings
                       </Link>
                     )}
+                    <Link
+                      to="/inbox"
+                      onClick={() => setMenuOpen(false)}
+                      className="navbar-dropdown-item"
+                    >
+                      <FiMessageCircle size={15} /> Inbox
+                    </Link>
+                    <Link
+                      to={`/users/${user.id}`}
+                      onClick={() => setMenuOpen(false)}
+                      className="navbar-dropdown-item"
+                    >
+                      <FiUser size={15} /> My Profile
+                    </Link>
+                    <Link
+                      to="/settings"
+                      onClick={() => setMenuOpen(false)}
+                      className="navbar-dropdown-item"
+                    >
+                      <FiShield size={15} /> Security
+                    </Link>
                     <hr />
                     <button
                       onClick={handleLogout}

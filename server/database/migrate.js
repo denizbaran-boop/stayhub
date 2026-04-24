@@ -41,6 +41,7 @@ const migrate = async () => {
       console.log('  Host:  sarah@example.com / password123');
       console.log('  Guest: john@example.com  / password123');
       console.log('  Guest: emily@example.com / password123');
+      console.log('  Admin: admin@example.com / password123');
     }
   } catch (err) {
     await client.query('ROLLBACK');

@@ -25,8 +25,14 @@ const BookingForm = ({ property, blockedDates = [] }) => {
     : 0;
 
   const basePrice = nights * parseFloat(property.price_per_night || 0);
-  const discount = promoApplied?.discount_amount || 0;
-  const total = basePrice - discount;
+
+  // Long-stay discount (mirrors server-side logic)
+  const longStayRate = nights >= 30 ? 0.20 : nights >= 7 ? 0.10 : 0;
+  const longStayDiscount = +(basePrice * longStayRate).toFixed(2);
+
+  const promoDiscount = promoApplied?.discount_amount || 0;
+  const discount = +(longStayDiscount + promoDiscount).toFixed(2);
+  const total = +(basePrice - discount).toFixed(2);
 
   const applyPromo = async () => {
     if (!promoCode.trim()) return;
@@ -82,7 +88,8 @@ const BookingForm = ({ property, blockedDates = [] }) => {
         promotion_code: promoApplied ? promoCode : undefined,
         special_requests: specialRequests || undefined,
       });
-      navigate('/dashboard/guest');
+      // Move straight to checkout
+      navigate(`/checkout/${res.data.id}`);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to create booking');
     } finally {
@@ -131,10 +138,16 @@ const BookingForm = ({ property, blockedDates = [] }) => {
             <span>${parseFloat(property.price_per_night).toFixed(0)} × {nights} night{nights !== 1 ? 's' : ''}</span>
             <span>${basePrice.toFixed(2)}</span>
           </div>
+          {longStayRate > 0 && (
+            <div className="price-row discount">
+              <span>Long-stay discount ({Math.round(longStayRate * 100)}%)</span>
+              <span>-${longStayDiscount.toFixed(2)}</span>
+            </div>
+          )}
           {promoApplied && (
             <div className="price-row discount">
-              <span>Discount ({promoApplied.promo.code})</span>
-              <span>-${discount.toFixed(2)}</span>
+              <span>Promo ({promoApplied.promo.code})</span>
+              <span>-${promoDiscount.toFixed(2)}</span>
             </div>
           )}
           <div className="price-row total">

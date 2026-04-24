@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../api/axios';
 import StarRating from '../components/StarRating';
-import { FiPlus, FiEdit, FiTrash2, FiCheck, FiX, FiHome, FiCalendar, FiTag, FiUsers, FiDollarSign } from 'react-icons/fi';
+import HostReviewForm from '../components/HostReviewForm';
+import { FiPlus, FiEdit, FiTrash2, FiCheck, FiX, FiHome, FiCalendar, FiTag, FiUsers, FiDollarSign, FiBarChart2, FiCreditCard, FiLock } from 'react-icons/fi';
 
 const BOOKING_STATUS_TABS = ['all', 'pending', 'confirmed', 'completed', 'cancelled', 'rejected'];
 
@@ -24,6 +25,7 @@ const HostDashboard = () => {
   });
   const [promoLoading, setPromoLoading] = useState(false);
   const [promoError, setPromoError] = useState('');
+  const [reviewingGuestBooking, setReviewingGuestBooking] = useState(null);
 
   useEffect(() => {
     loadAll();
@@ -134,9 +136,20 @@ const HostDashboard = () => {
             <h1>Host Dashboard</h1>
             <p className="dashboard-subtitle">Welcome back, {user?.first_name}!</p>
           </div>
-          <Link to="/create-listing" className="btn btn-primary">
-            <FiPlus size={15} /> Add Listing
-          </Link>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <Link to="/dashboard/host/payouts" className="btn btn-secondary">
+              <FiCreditCard size={14} /> Payouts
+            </Link>
+            <Link to="/dashboard/host/earnings" className="btn btn-secondary">
+              <FiBarChart2 size={14} /> Earnings
+            </Link>
+            <Link to="/inbox" className="btn btn-secondary">
+              Inbox
+            </Link>
+            <Link to="/create-listing" className="btn btn-primary">
+              <FiPlus size={15} /> Add Listing
+            </Link>
+          </div>
         </div>
 
         {/* Stats */}
@@ -276,7 +289,30 @@ const HostDashboard = () => {
                                 Mark Completed
                               </button>
                             )}
+                            {['completed', 'confirmed'].includes(booking.status) && !booking.host_review_id && (
+                              <button
+                                onClick={() => setReviewingGuestBooking(reviewingGuestBooking === booking.id ? null : booking.id)}
+                                className="btn btn-outline-primary btn-sm"
+                              >
+                                Review Guest
+                              </button>
+                            )}
+                            {booking.host_review_id && (
+                              <span style={{ fontSize: 12, color: 'var(--text-medium)' }}>
+                                ✓ Reviewed ({booking.host_review_rating}★)
+                              </span>
+                            )}
                           </div>
+                          {reviewingGuestBooking === booking.id && (
+                            <HostReviewForm
+                              bookingId={booking.id}
+                              onSubmitted={(r) => {
+                                setBookings(prev => prev.map(b => b.id === booking.id ? { ...b, host_review_id: r.id, host_review_rating: r.rating } : b));
+                                setReviewingGuestBooking(null);
+                              }}
+                              onCancel={() => setReviewingGuestBooking(null)}
+                            />
+                          )}
                         </div>
                       </div>
                     ))}
@@ -326,6 +362,9 @@ const HostDashboard = () => {
                             <Link to={`/properties/${property.id}`} className="btn btn-secondary btn-sm">View</Link>
                             <Link to={`/edit-listing/${property.id}`} className="btn btn-secondary btn-sm">
                               <FiEdit size={13} /> Edit
+                            </Link>
+                            <Link to={`/dashboard/host/properties/${property.id}/availability`} className="btn btn-secondary btn-sm">
+                              <FiLock size={13} /> Dates
                             </Link>
                             <button
                               onClick={() => handleDeleteProperty(property.id)}

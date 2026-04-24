@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { FiMail, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
 
 const LoginPage = () => {
-  const { login } = useAuth();
+  const { login, verifyTwoFactor } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from || '/';
@@ -14,6 +14,12 @@ const LoginPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
+
+  // Two-factor state
+  const [twoFAStep, setTwoFAStep] = useState(false);
+  const [twoFACode, setTwoFACode] = useState('');
+  const [challengeToken, setChallengeToken] = useState('');
+  const [demoCode, setDemoCode] = useState('');
 
   const validate = () => {
     const errors = {};
@@ -34,10 +40,39 @@ const LoginPage = () => {
     setError('');
     setFieldErrors({});
     try {
-      const user = await login(form.email, form.password);
-      navigate(user.role === 'host' ? '/dashboard/host' : '/dashboard/guest');
+      const result = await login(form.email, form.password);
+      if (result.twoFactorRequired) {
+        setTwoFAStep(true);
+        setChallengeToken(result.challengeToken);
+        setDemoCode(result.demoCode || '');
+        return;
+      }
+      const user = result.user;
+      navigate(
+        user.role === 'admin' ? '/admin'
+        : user.role === 'host' ? '/dashboard/host'
+        : '/dashboard/guest'
+      );
     } catch (err) {
       setError(err.response?.data?.error || 'Login failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerify2FA = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      const user = await verifyTwoFactor(challengeToken, twoFACode.trim());
+      navigate(
+        user.role === 'admin' ? '/admin'
+        : user.role === 'host' ? '/dashboard/host'
+        : '/dashboard/guest'
+      );
+    } catch (err) {
+      setError(err.response?.data?.error || 'Verification failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -59,6 +94,44 @@ const LoginPage = () => {
 
         {error && <div className="alert alert-error">{error}</div>}
 
+        {twoFAStep ? (
+          <form onSubmit={handleVerify2FA} noValidate>
+            <p style={{ marginBottom: 16, color: 'var(--text-medium)', fontSize: 14 }}>
+              A 6-digit verification code has been sent to your email. Check
+              <code> server/logs/emails.log </code>
+              or the server console.
+            </p>
+            {demoCode && (
+              <div className="alert alert-info" style={{ fontSize: 13 }}>
+                Demo mode: your code is <strong>{demoCode}</strong>
+              </div>
+            )}
+            <div className="form-group">
+              <label className="form-label">Verification Code</label>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="123456"
+                value={twoFACode}
+                onChange={(e) => setTwoFACode(e.target.value)}
+                autoFocus
+                inputMode="numeric"
+                maxLength={6}
+              />
+            </div>
+            <button type="submit" disabled={loading || !twoFACode} className="btn btn-primary btn-full btn-lg" style={{ marginTop: 8 }}>
+              {loading ? 'Verifying...' : 'Verify and Sign In'}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setTwoFAStep(false); setTwoFACode(''); setChallengeToken(''); setDemoCode(''); }}
+              className="btn btn-secondary btn-full"
+              style={{ marginTop: 10 }}
+            >
+              Back
+            </button>
+          </form>
+        ) : (
         <form onSubmit={handleSubmit} noValidate>
           <div className="form-group">
             <label className="form-label">Email address</label>
@@ -102,7 +175,14 @@ const LoginPage = () => {
           <button type="submit" disabled={loading} className="btn btn-primary btn-full btn-lg" style={{ marginTop: 8 }}>
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
+
+          <div style={{ textAlign: 'center', marginTop: 16 }}>
+            <Link to="/forgot-password" className="auth-link" style={{ fontSize: 14 }}>
+              Forgot password?
+            </Link>
+          </div>
         </form>
+        )}
 
         <div className="auth-footer">
           <p>
@@ -127,6 +207,13 @@ const LoginPage = () => {
               onClick={() => setForm({ email: 'john@example.com', password: 'password123' })}
             >
               Guest: john@example.com
+            </button>
+            <button
+              type="button"
+              className="demo-btn"
+              onClick={() => setForm({ email: 'admin@example.com', password: 'password123' })}
+            >
+              Admin: admin@example.com
             </button>
           </div>
         </div>

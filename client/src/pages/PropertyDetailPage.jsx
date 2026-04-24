@@ -7,6 +7,7 @@ import AvailabilityCalendar from '../components/AvailabilityCalendar';
 import ReviewForm from '../components/ReviewForm';
 import MapView from '../components/MapView';
 import StarRating from '../components/StarRating';
+import InquiryForm from '../components/InquiryForm';
 import {
   FiMapPin, FiUsers, FiBriefcase, FiHome, FiStar,
   FiChevronLeft, FiChevronRight, FiX, FiShare2, FiHeart
@@ -144,7 +145,10 @@ const PropertyDetailPage = () => {
             <div className="property-host-row">
               <div>
                 <h2 className="property-info-title">
-                  {property.property_type.charAt(0).toUpperCase() + property.property_type.slice(1)} hosted by {property.host_first_name}
+                  {property.property_type.charAt(0).toUpperCase() + property.property_type.slice(1)} hosted by{' '}
+                  <Link to={`/users/${property.host_id}`} style={{ color: 'var(--primary)', textDecoration: 'underline' }}>
+                    {property.host_first_name}
+                  </Link>
                 </h2>
                 <div className="property-quick-info">
                   <span><FiUsers size={14} /> {property.max_guests} guests</span>
@@ -155,7 +159,9 @@ const PropertyDetailPage = () => {
                 </div>
               </div>
               {property.host_avatar && (
-                <img src={property.host_avatar} alt={property.host_first_name} className="host-avatar" />
+                <Link to={`/users/${property.host_id}`}>
+                  <img src={property.host_avatar} alt={property.host_first_name} className="host-avatar" />
+                </Link>
               )}
             </div>
 
@@ -269,7 +275,10 @@ const PropertyDetailPage = () => {
                 </Link>
               </div>
             ) : (
-              <BookingForm property={property} blockedDates={blockedDates} />
+              <>
+                <BookingForm property={property} blockedDates={blockedDates} />
+                <InquiryForm propertyId={id} hostFirstName={property.host_first_name} />
+              </>
             )}
           </div>
         </div>

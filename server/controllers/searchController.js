@@ -12,6 +12,9 @@ const search = async (req, res, next) => {
       property_type,
       amenities,
       bedrooms,
+      featured,
+      // Map viewport bounds (for "search as map moves")
+      ne_lat, ne_lng, sw_lat, sw_lng,
       page = 1,
       limit = 20,
       sort = 'relevance',
@@ -65,6 +68,21 @@ const search = async (req, res, next) => {
       params.push(parseInt(bedrooms));
       whereClause += ` AND p.bedrooms >= $${paramIdx}`;
       paramIdx++;
+    }
+
+    if (featured === 'true') {
+      whereClause += ` AND p.is_featured = TRUE`;
+    }
+
+    // Map viewport bounding box
+    if (ne_lat && ne_lng && sw_lat && sw_lng) {
+      params.push(parseFloat(sw_lat));
+      params.push(parseFloat(ne_lat));
+      params.push(parseFloat(sw_lng));
+      params.push(parseFloat(ne_lng));
+      whereClause += ` AND p.latitude BETWEEN $${paramIdx} AND $${paramIdx + 1}
+                       AND p.longitude BETWEEN $${paramIdx + 2} AND $${paramIdx + 3}`;
+      paramIdx += 4;
     }
 
     // Exclude properties with overlapping bookings

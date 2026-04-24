@@ -162,7 +162,7 @@ const updateProperty = async (req, res, next) => {
     const {
       title, description, property_type, address, city, country,
       latitude, longitude, price_per_night, max_guests, bedrooms,
-      bathrooms, amenities, status
+      bathrooms, amenities, status, is_featured,
     } = req.body;
 
     const check = await pool.query(
@@ -177,6 +177,9 @@ const updateProperty = async (req, res, next) => {
     if (check.rows[0].host_id !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Not authorized to update this property' });
     }
+
+    // Only admins may change is_featured
+    const featuredValue = req.user.role === 'admin' ? is_featured : undefined;
 
     const result = await pool.query(
       `UPDATE properties
@@ -194,12 +197,13 @@ const updateProperty = async (req, res, next) => {
            bathrooms = COALESCE($12, bathrooms),
            amenities = COALESCE($13, amenities),
            status = COALESCE($14, status),
+           is_featured = COALESCE($15, is_featured),
            updated_at = NOW()
-       WHERE id = $15
+       WHERE id = $16
        RETURNING *`,
       [title, description, property_type, address, city, country,
        latitude, longitude, price_per_night, max_guests, bedrooms,
-       bathrooms, amenities, status, id]
+       bathrooms, amenities, status, featuredValue, id]
     );
 
     res.json(result.rows[0]);
@@ -339,7 +343,7 @@ const getFeaturedProperties = async (req, res, next) => {
        LEFT JOIN reviews r ON r.property_id = p.id
        WHERE p.status = 'active'
        GROUP BY p.id, u.first_name, u.last_name
-       ORDER BY avg_rating DESC NULLS LAST, p.created_at DESC
+       ORDER BY p.is_featured DESC, avg_rating DESC NULLS LAST, p.created_at DESC
        LIMIT 12`
     );
 

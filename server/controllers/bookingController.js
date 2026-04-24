@@ -1,4 +1,74 @@
 const pool = require('../config/db');
+const { createNotification } = require('../services/notifier');
+
+// Long-stay discount: 10% for 7+ nights, 20% for 30+ nights
+function longStayDiscountRate(nights) {
+  if (nights >= 30) return 0.20;
+  if (nights >= 7) return 0.10;
+  return 0;
+}
+
+const previewPrice = async (req, res, next) => {
+  try {
+    const { property_id, check_in, check_out, promotion_code } = req.body;
+    if (!property_id || !check_in || !check_out) {
+      return res.status(400).json({ error: 'property_id, check_in, and check_out are required' });
+    }
+    const p = await pool.query(
+      "SELECT price_per_night FROM properties WHERE id = $1 AND status = 'active'",
+      [property_id]
+    );
+    if (!p.rows[0]) return res.status(404).json({ error: 'Property not found' });
+
+    const nights = Math.ceil((new Date(check_out) - new Date(check_in)) / 86400000);
+    if (nights <= 0) return res.status(400).json({ error: 'Check-out must be after check-in' });
+
+    const perNight = parseFloat(p.rows[0].price_per_night);
+    const subtotal = perNight * nights;
+    const stayRate = longStayDiscountRate(nights);
+    const stayDiscount = +(subtotal * stayRate).toFixed(2);
+
+    let promoDiscount = 0;
+    let promoInfo = null;
+    if (promotion_code) {
+      const promoRes = await pool.query(
+        `SELECT * FROM promotions
+         WHERE code = $1 AND is_active = TRUE
+         AND (property_id IS NULL OR property_id = $2)
+         AND (valid_from IS NULL OR valid_from <= CURRENT_DATE)
+         AND (valid_until IS NULL OR valid_until >= CURRENT_DATE)
+         AND (max_uses IS NULL OR uses_count < max_uses)`,
+        [promotion_code.toUpperCase(), property_id]
+      );
+      if (promoRes.rows[0]) {
+        const promo = promoRes.rows[0];
+        if (promo.discount_type === 'percentage') {
+          promoDiscount = +((subtotal - stayDiscount) * (parseFloat(promo.discount_value) / 100)).toFixed(2);
+        } else {
+          promoDiscount = Math.min(parseFloat(promo.discount_value), subtotal - stayDiscount);
+        }
+        promoInfo = { code: promo.code, discount_type: promo.discount_type, discount_value: promo.discount_value };
+      }
+    }
+
+    const discount_amount = +(stayDiscount + promoDiscount).toFixed(2);
+    const final_price = +(subtotal - discount_amount).toFixed(2);
+
+    res.json({
+      nights,
+      per_night: perNight,
+      subtotal: +subtotal.toFixed(2),
+      long_stay_rate: stayRate,
+      long_stay_discount: stayDiscount,
+      promo_discount: promoDiscount,
+      promo: promoInfo,
+      discount_amount,
+      final_price,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
 
 const createBooking = async (req, res, next) => {
   try {
@@ -53,8 +123,13 @@ const createBooking = async (req, res, next) => {
 
     // Calculate price
     const nights = Math.ceil((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
-    const total_price = parseFloat(property.price_per_night) * nights;
-    let discount_amount = 0;
+    const subtotal = parseFloat(property.price_per_night) * nights;
+
+    // Long-stay discount (7+ nights 10%, 30+ nights 20%)
+    const stayRate = longStayDiscountRate(nights);
+    const stay_discount = +(subtotal * stayRate).toFixed(2);
+
+    let promo_discount = 0;
     let promotion_id = null;
 
     // Apply promotion if provided
@@ -73,18 +148,20 @@ const createBooking = async (req, res, next) => {
       if (promoResult.rows[0]) {
         const promo = promoResult.rows[0];
         promotion_id = promo.id;
-
+        const base = subtotal - stay_discount;
         if (promo.discount_type === 'percentage') {
-          discount_amount = total_price * (parseFloat(promo.discount_value) / 100);
+          promo_discount = +(base * (parseFloat(promo.discount_value) / 100)).toFixed(2);
         } else {
-          discount_amount = Math.min(parseFloat(promo.discount_value), total_price);
+          promo_discount = Math.min(parseFloat(promo.discount_value), base);
         }
       } else {
         return res.status(400).json({ error: 'Invalid or expired promotion code' });
       }
     }
 
-    const final_price = total_price - discount_amount;
+    const total_price = subtotal;
+    const discount_amount = +(stay_discount + promo_discount).toFixed(2);
+    const final_price = +(total_price - discount_amount).toFixed(2);
 
     const client = await pool.connect();
     try {
@@ -106,6 +183,14 @@ const createBooking = async (req, res, next) => {
           [promotion_id]
         );
       }
+
+      await createNotification({
+        user_id: property.host_id,
+        type: 'booking_request',
+        title: 'New booking request',
+        message: `${req.user.first_name} ${req.user.last_name} requested to book ${property.title}.`,
+        link: '/dashboard/host',
+      }, client);
 
       await client.query('COMMIT');
 
@@ -204,10 +289,12 @@ const getHostBookings = async (req, res, next) => {
            (SELECT url FROM property_photos WHERE property_id = p.id ORDER BY display_order LIMIT 1)
          ) as property_photo,
          g.first_name as guest_first_name, g.last_name as guest_last_name,
-         g.email as guest_email, g.phone as guest_phone, g.avatar_url as guest_avatar
+         g.email as guest_email, g.phone as guest_phone, g.avatar_url as guest_avatar,
+         hr.id as host_review_id, hr.rating as host_review_rating
        FROM bookings b
        JOIN properties p ON p.id = b.property_id
        JOIN users g ON g.id = b.guest_id
+       LEFT JOIN host_reviews hr ON hr.booking_id = b.id
        WHERE p.host_id = $1 ${filters}
        ORDER BY b.created_at DESC
        LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
@@ -314,6 +401,24 @@ const updateBookingStatus = async (req, res, next) => {
       [status, id]
     );
 
+    // Notify the counterparty
+    const titles = {
+      confirmed: 'Booking confirmed',
+      rejected: 'Booking declined',
+      cancelled: 'Booking cancelled',
+      completed: 'Stay completed',
+    };
+    const recipient = status === 'confirmed' || status === 'rejected'
+      ? booking.guest_id
+      : (req.user.id === booking.guest_id ? booking.host_id : booking.guest_id);
+    await createNotification({
+      user_id: recipient,
+      type: `booking_${status}`,
+      title: titles[status] || 'Booking updated',
+      message: `Booking #${id.slice(0, 8)} is now ${status}.`,
+      link: recipient === booking.host_id ? '/dashboard/host' : '/dashboard/guest',
+    });
+
     res.json(result.rows[0]);
   } catch (err) {
     next(err);
@@ -332,4 +437,5 @@ module.exports = {
   getBookingById,
   updateBookingStatus,
   cancelBooking,
+  previewPrice,
 };

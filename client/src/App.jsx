@@ -11,6 +11,19 @@ import EditListingPage from './pages/EditListingPage';
 import GuestDashboard from './pages/GuestDashboard';
 import HostDashboard from './pages/HostDashboard';
 import SearchResultsPage from './pages/SearchResultsPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+import CheckoutPage from './pages/CheckoutPage';
+import PublicProfilePage from './pages/PublicProfilePage';
+import AdminUsersPage from './pages/AdminUsersPage';
+import AdminRevenuePage from './pages/AdminRevenuePage';
+import HostPayoutsPage from './pages/HostPayoutsPage';
+import HostEarningsPage from './pages/HostEarningsPage';
+import InboxPage from './pages/InboxPage';
+import ManageAvailabilityPage from './pages/ManageAvailabilityPage';
+import MapSearchPage from './pages/MapSearchPage';
+import FeaturedPage from './pages/FeaturedPage';
+import SettingsPage from './pages/SettingsPage';
 
 const ProtectedRoute = ({ children, requiredRole }) => {
   const { user, loading } = useAuth();
@@ -22,6 +35,14 @@ const ProtectedRoute = ({ children, requiredRole }) => {
   return children;
 };
 
+const AdminRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  if (loading) return <div className="loading-screen"><div className="spinner"></div></div>;
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.role !== 'admin') return <Navigate to="/" replace />;
+  return children;
+};
+
 const AppRoutes = () => {
   return (
     <>
@@ -30,8 +51,14 @@ const AppRoutes = () => {
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/search" element={<SearchResultsPage />} />
+        <Route path="/map-search" element={<MapSearchPage />} />
+        <Route path="/featured" element={<FeaturedPage />} />
         <Route path="/properties/:id" element={<PropertyDetailPage />} />
+        <Route path="/users/:id" element={<PublicProfilePage />} />
+
         <Route
           path="/create-listing"
           element={
@@ -64,6 +91,79 @@ const AppRoutes = () => {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/dashboard/host/payouts"
+          element={
+            <ProtectedRoute requiredRole="host">
+              <HostPayoutsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard/host/earnings"
+          element={
+            <ProtectedRoute requiredRole="host">
+              <HostEarningsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard/host/properties/:propertyId/availability"
+          element={
+            <ProtectedRoute requiredRole="host">
+              <ManageAvailabilityPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/checkout/:bookingId"
+          element={
+            <ProtectedRoute>
+              <CheckoutPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inbox"
+          element={
+            <ProtectedRoute>
+              <InboxPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inbox/:conversationId"
+          element={
+            <ProtectedRoute>
+              <InboxPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <SettingsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <AdminRoute>
+              <AdminUsersPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/revenue"
+          element={
+            <AdminRoute>
+              <AdminRevenuePage />
+            </AdminRoute>
+          }
+        />
+
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>

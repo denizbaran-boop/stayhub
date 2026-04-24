@@ -9,10 +9,13 @@ const authenticate = async (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
     const result = await pool.query(
-      'SELECT id, email, role, first_name, last_name, avatar_url FROM users WHERE id = $1',
+      'SELECT id, email, role, first_name, last_name, avatar_url, is_active FROM users WHERE id = $1',
       [decoded.userId]
     );
     if (!result.rows[0]) return res.status(401).json({ error: 'User not found' });
+    if (result.rows[0].is_active === false) {
+      return res.status(403).json({ error: 'Account is deactivated' });
+    }
     req.user = result.rows[0];
     next();
   } catch (err) {

@@ -2,10 +2,11 @@
 -- Password for all users is: password123
 -- Hash generated with bcrypt rounds=12
 
-INSERT INTO users (id, email, password_hash, first_name, last_name, role, avatar_url, phone) VALUES
-  ('a1b2c3d4-e5f6-7890-abcd-ef1234567890', 'sarah@example.com', '$2a$12$w8zAa.q28yMp18aZqJJbgegmXBylzUipk5X0kG4bh4HjptIdFNBZy', 'Sarah', 'Johnson', 'host', 'https://i.pravatar.cc/150?img=47', '+1-555-0101'),
-  ('b2c3d4e5-f6a7-8901-bcde-f12345678901', 'john@example.com', '$2a$12$w8zAa.q28yMp18aZqJJbgegmXBylzUipk5X0kG4bh4HjptIdFNBZy', 'John', 'Smith', 'guest', 'https://i.pravatar.cc/150?img=12', '+1-555-0102'),
-  ('c3d4e5f6-a7b8-9012-cdef-123456789012', 'emily@example.com', '$2a$12$w8zAa.q28yMp18aZqJJbgegmXBylzUipk5X0kG4bh4HjptIdFNBZy', 'Emily', 'Chen', 'guest', 'https://i.pravatar.cc/150?img=32', '+1-555-0103')
+INSERT INTO users (id, email, password_hash, first_name, last_name, role, avatar_url, phone, is_active) VALUES
+  ('a1b2c3d4-e5f6-7890-abcd-ef1234567890', 'sarah@example.com', '$2a$12$w8zAa.q28yMp18aZqJJbgegmXBylzUipk5X0kG4bh4HjptIdFNBZy', 'Sarah', 'Johnson', 'host', 'https://i.pravatar.cc/150?img=47', '+1-555-0101', TRUE),
+  ('b2c3d4e5-f6a7-8901-bcde-f12345678901', 'john@example.com', '$2a$12$w8zAa.q28yMp18aZqJJbgegmXBylzUipk5X0kG4bh4HjptIdFNBZy', 'John', 'Smith', 'guest', 'https://i.pravatar.cc/150?img=12', '+1-555-0102', TRUE),
+  ('c3d4e5f6-a7b8-9012-cdef-123456789012', 'emily@example.com', '$2a$12$w8zAa.q28yMp18aZqJJbgegmXBylzUipk5X0kG4bh4HjptIdFNBZy', 'Emily', 'Chen', 'guest', 'https://i.pravatar.cc/150?img=32', '+1-555-0103', TRUE),
+  ('adadada1-adad-adad-adad-adadadadad01', 'admin@example.com', '$2a$12$w8zAa.q28yMp18aZqJJbgegmXBylzUipk5X0kG4bh4HjptIdFNBZy', 'Alex', 'Admin', 'admin', 'https://i.pravatar.cc/150?img=60', '+1-555-0000', TRUE)
 ON CONFLICT (email) DO NOTHING;
 
 INSERT INTO properties (id, host_id, title, description, property_type, address, city, country, latitude, longitude, price_per_night, max_guests, bedrooms, bathrooms, amenities) VALUES
@@ -218,4 +219,71 @@ INSERT INTO promotions (host_id, property_id, code, description, discount_type, 
     CURRENT_DATE + INTERVAL '90 days',
     TRUE
   )
+ON CONFLICT DO NOTHING;
+
+-- Feature two properties so Featured page has content
+UPDATE properties SET is_featured = TRUE
+WHERE id IN ('b8c9d0e1-f2a3-4567-1234-678901234567', 'e5f6a7b8-c9d0-1234-ef01-345678901234');
+
+-- Payout for the completed booking
+INSERT INTO payouts (host_id, booking_id, amount, commission, status, payout_date)
+VALUES (
+  'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+  'd0e1f2a3-b4c5-6789-3456-890123456789',
+  607.50,
+  67.50,
+  'paid',
+  CURRENT_DATE - INTERVAL '5 days'
+)
+ON CONFLICT DO NOTHING;
+
+-- Payment record for the completed booking
+INSERT INTO payments (booking_id, amount, cardholder_name, card_last4, card_brand, status)
+VALUES (
+  'd0e1f2a3-b4c5-6789-3456-890123456789',
+  675.00,
+  'Emily Chen',
+  '4242',
+  'Visa',
+  'succeeded'
+)
+ON CONFLICT DO NOTHING;
+
+-- Host review of guest for completed booking
+INSERT INTO host_reviews (booking_id, host_id, guest_id, rating, comment) VALUES
+  (
+    'd0e1f2a3-b4c5-6789-3456-890123456789',
+    'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    'c3d4e5f6-a7b8-9012-cdef-123456789012',
+    5,
+    'Emily was a wonderful guest. Very respectful of the property and communicated well. Would happily host again!'
+  )
+ON CONFLICT DO NOTHING;
+
+-- Demo conversation (pre-booking inquiry) between John and Sarah about the Downtown Apartment
+INSERT INTO conversations (id, guest_id, host_id, property_id, subject) VALUES
+  (
+    'c0111111-1111-1111-1111-111111111111',
+    'b2c3d4e5-f6a7-8901-bcde-f12345678901',
+    'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    'd4e5f6a7-b8c9-0123-def0-234567890123',
+    'Inquiry about Luxury Downtown Apartment'
+  )
+ON CONFLICT DO NOTHING;
+
+INSERT INTO messages (conversation_id, sender_id, content, is_read) VALUES
+  ('c0111111-1111-1111-1111-111111111111', 'b2c3d4e5-f6a7-8901-bcde-f12345678901', 'Hi Sarah! Is your downtown apartment available for a work trip next month? Also — is there parking nearby?', TRUE),
+  ('c0111111-1111-1111-1111-111111111111', 'a1b2c3d4-e5f6-7890-abcd-ef1234567890', 'Hi John! Yes it should be available. The building has valet parking ($35/night) and there is also street parking after 6pm.', TRUE),
+  ('c0111111-1111-1111-1111-111111111111', 'b2c3d4e5-f6a7-8901-bcde-f12345678901', 'Great, thanks! I will go ahead and book.', FALSE)
+ON CONFLICT DO NOTHING;
+
+UPDATE conversations SET last_message_at = NOW()
+WHERE id = 'c0111111-1111-1111-1111-111111111111';
+
+-- Demo notifications
+INSERT INTO notifications (user_id, type, title, message, link, is_read) VALUES
+  ('b2c3d4e5-f6a7-8901-bcde-f12345678901', 'booking_confirmed', 'Booking confirmed', 'Your stay at Luxury Downtown Apartment is confirmed.', '/dashboard/guest', FALSE),
+  ('a1b2c3d4-e5f6-7890-abcd-ef1234567890', 'booking_request', 'New booking request', 'John requested to book Mountain Cabin Retreat.', '/dashboard/host', FALSE),
+  ('a1b2c3d4-e5f6-7890-abcd-ef1234567890', 'payout_paid', 'Payout released', 'Your payout of $607.50 has been processed.', '/dashboard/host/payouts', TRUE),
+  ('c3d4e5f6-a7b8-9012-cdef-123456789012', 'host_review', 'You received a review', 'Your host left you a 5-star review.', '/users/c3d4e5f6-a7b8-9012-cdef-123456789012', FALSE)
 ON CONFLICT DO NOTHING;
