@@ -18,6 +18,21 @@ const generateNumericCode = (length = 6) => {
   return code;
 };
 
+// Strong password policy: min 8 chars, at least one digit, at least one special character
+const SPECIAL_CHAR_RE = /[!@#$%^&*()_\-+={}[\]|\\:;"'<>,.?/~`]/;
+const validatePasswordStrength = (password) => {
+  if (!password || password.length < 8) {
+    return 'Password must be at least 8 characters long';
+  }
+  if (!/\d/.test(password)) {
+    return 'Password must contain at least one number';
+  }
+  if (!SPECIAL_CHAR_RE.test(password)) {
+    return 'Password must contain at least one special character';
+  }
+  return null;
+};
+
 const register = async (req, res, next) => {
   try {
     const { email, password, first_name, last_name, role, phone } = req.body;
@@ -26,9 +41,8 @@ const register = async (req, res, next) => {
       return res.status(400).json({ error: 'Email, password, first name, and last name are required' });
     }
 
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters' });
-    }
+    const pwError = validatePasswordStrength(password);
+    if (pwError) return res.status(400).json({ error: pwError });
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
@@ -220,9 +234,8 @@ const resetPassword = async (req, res, next) => {
     if (!token || !new_password) {
       return res.status(400).json({ error: 'Token and new password are required' });
     }
-    if (new_password.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters' });
-    }
+    const pwError = validatePasswordStrength(new_password);
+    if (pwError) return res.status(400).json({ error: pwError });
 
     const tokenResult = await pool.query(
       `SELECT * FROM password_reset_tokens
@@ -296,9 +309,8 @@ const changePassword = async (req, res, next) => {
       return res.status(400).json({ error: 'Current and new passwords are required' });
     }
 
-    if (new_password.length < 6) {
-      return res.status(400).json({ error: 'New password must be at least 6 characters' });
-    }
+    const pwError = validatePasswordStrength(new_password);
+    if (pwError) return res.status(400).json({ error: pwError });
 
     const result = await pool.query('SELECT password_hash FROM users WHERE id = $1', [req.user.id]);
     const user = result.rows[0];

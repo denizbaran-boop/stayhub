@@ -21,6 +21,8 @@ const RegisterPage = () => {
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
 
+  const SPECIAL_CHAR_RE = /[!@#$%^&*()_\-+={}[\]|\\:;"'<>,.?/~`]/;
+
   const validate = () => {
     const errors = {};
     if (!form.first_name.trim()) errors.first_name = 'First name is required';
@@ -28,9 +30,19 @@ const RegisterPage = () => {
     if (!form.email) errors.email = 'Email is required';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errors.email = 'Invalid email';
     if (!form.password) errors.password = 'Password is required';
-    else if (form.password.length < 6) errors.password = 'Password must be at least 6 characters';
+    else if (form.password.length < 8) errors.password = 'Password must be at least 8 characters';
+    else if (!/\d/.test(form.password)) errors.password = 'Password must contain at least one number';
+    else if (!SPECIAL_CHAR_RE.test(form.password)) errors.password = 'Password must contain at least one special character';
     if (form.password !== form.confirmPassword) errors.confirmPassword = 'Passwords do not match';
     return errors;
+  };
+
+  // Live indicator for password requirements
+  const pw = form.password;
+  const pwChecks = {
+    length: pw.length >= 8,
+    number: /\d/.test(pw),
+    special: SPECIAL_CHAR_RE.test(pw),
   };
 
   const handleSubmit = async (e) => {
@@ -160,7 +172,7 @@ const RegisterPage = () => {
               <input
                 type={showPassword ? 'text' : 'password'}
                 className={`form-input input-with-icon input-with-right-icon ${fieldErrors.password ? 'error' : ''}`}
-                placeholder="Min. 6 characters"
+                placeholder="Min. 8 chars, 1 number, 1 special"
                 value={form.password}
                 onChange={update('password')}
                 autoComplete="new-password"
@@ -169,6 +181,19 @@ const RegisterPage = () => {
                 {showPassword ? <FiEyeOff size={15} /> : <FiEye size={15} />}
               </button>
             </div>
+            {form.password && (
+              <ul className="pw-checklist">
+                <li className={pwChecks.length ? 'ok' : ''}>
+                  {pwChecks.length ? '✓' : '○'} At least 8 characters
+                </li>
+                <li className={pwChecks.number ? 'ok' : ''}>
+                  {pwChecks.number ? '✓' : '○'} At least one number
+                </li>
+                <li className={pwChecks.special ? 'ok' : ''}>
+                  {pwChecks.special ? '✓' : '○'} At least one special character
+                </li>
+              </ul>
+            )}
             {fieldErrors.password && <span className="form-error">{fieldErrors.password}</span>}
           </div>
 
@@ -304,6 +329,21 @@ const RegisterPage = () => {
           text-decoration: none;
         }
         .auth-link:hover { text-decoration: underline; }
+        .pw-checklist {
+          list-style: none;
+          padding: 6px 0 0;
+          margin: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+        .pw-checklist li {
+          font-size: 12px;
+          color: var(--text-medium);
+        }
+        .pw-checklist li.ok {
+          color: #28a745;
+        }
       `}</style>
     </div>
   );

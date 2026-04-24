@@ -17,7 +17,9 @@ const ResetPasswordPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    if (password.length < 6) return setError('Password must be at least 6 characters');
+    if (password.length < 8) return setError('Password must be at least 8 characters');
+    if (!/\d/.test(password)) return setError('Password must contain at least one number');
+    if (!/[!@#$%^&*()_\-+={}[\]|\\:;"'<>,.?/~`]/.test(password)) return setError('Password must contain at least one special character');
     if (password !== confirm) return setError('Passwords do not match');
     setLoading(true);
     try {

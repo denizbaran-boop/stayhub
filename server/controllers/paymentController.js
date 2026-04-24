@@ -1,6 +1,5 @@
 const pool = require('../config/db');
 const { createNotification } = require('../services/notifier');
-const { bookingConfirmationEmail } = require('../services/mailer');
 
 const COMMISSION_RATE = 0.10; // platform keeps 10%
 
@@ -96,56 +95,37 @@ const processPayment = async (req, res, next) => {
         [booking_id, amount, cardholder_name, last4, brand]
       );
 
-      // Auto-confirm booking on successful payment
-      if (booking.status === 'pending') {
-        await client.query(
-          "UPDATE bookings SET status = 'confirmed', updated_at = NOW() WHERE id = $1",
-          [booking_id]
-        );
-      }
-
-      // Queue payout
+      // Booking stays in its current state; payout is held until host approves.
+      // Funds are collected up-front but released to the host only after approval.
       await client.query(
         `INSERT INTO payouts (host_id, booking_id, amount, commission, status)
-         VALUES ($1, $2, $3, $4, 'pending')`,
+         VALUES ($1, $2, $3, $4, 'on_hold')`,
         [booking.host_id, booking_id, hostAmount, commission]
       );
 
-      // Notifications
+      // Notifications — payment received, awaiting host approval
       await createNotification({
         user_id: booking.guest_id,
-        type: 'booking_confirmed',
-        title: 'Booking Confirmed',
-        message: `Your stay at ${booking.property_title} is confirmed.`,
+        type: 'payment_received',
+        title: 'Payment received',
+        message: `Your payment of $${amount.toFixed(2)} for ${booking.property_title} is held. Awaiting host approval.`,
         link: `/dashboard/guest`,
       }, client);
 
       await createNotification({
         user_id: booking.host_id,
-        type: 'payment_received',
-        title: 'Payment received',
-        message: `You received a payment of $${hostAmount.toFixed(2)} for ${booking.property_title}.`,
+        type: 'booking_paid',
+        title: 'Guest paid — approval needed',
+        message: `${booking.guest_first_name} ${booking.guest_last_name} paid $${amount.toFixed(2)} for ${booking.property_title}. Please approve or reject the booking.`,
         link: `/dashboard/host`,
       }, client);
 
       await client.query('COMMIT');
 
-      // Send mock confirmation email (outside transaction)
-      await bookingConfirmationEmail({
-        guestEmail: booking.guest_email,
-        guestName: `${booking.guest_first_name} ${booking.guest_last_name}`,
-        hostName: `${booking.host_first_name} ${booking.host_last_name}`,
-        propertyTitle: booking.property_title,
-        bookingId: booking.id,
-        checkIn: booking.check_in,
-        checkOut: booking.check_out,
-        totalPrice: amount,
-      });
-
       res.status(201).json({
         payment: payResult.rows[0],
-        booking_status: 'confirmed',
-        message: 'Payment successful. Booking confirmed.',
+        booking_status: booking.status,
+        message: 'Payment successful. Your booking is awaiting host approval.',
       });
     } catch (err) {
       await client.query('ROLLBACK');

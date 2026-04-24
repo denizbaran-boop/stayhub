@@ -106,12 +106,17 @@ const CheckoutPage = () => {
           <div className="checkout-success">
             <FiCheck size={48} className="success-icon" />
             <h1>Payment Successful</h1>
-            <p>Your booking is confirmed. A confirmation email has been generated (see server/logs/emails.log).</p>
+            <p>
+              Your payment is held. The booking is <strong>pending host approval</strong> — you'll
+              get a confirmation email and in-app alert as soon as the host accepts your request.
+              If the host rejects, your payment will be refunded automatically.
+            </p>
             <div className="success-summary">
               <p><strong>Booking:</strong> #{booking.id.slice(0, 8)}</p>
               <p><strong>Property:</strong> {booking.property_title}</p>
               <p><strong>Dates:</strong> {booking.check_in} → {booking.check_out}</p>
               <p><strong>Total paid:</strong> ${parseFloat(booking.final_price).toFixed(2)}</p>
+              <p><strong>Status:</strong> Awaiting host approval</p>
             </div>
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 24 }}>
               <Link to="/dashboard/guest" className="btn btn-primary">View my trips</Link>

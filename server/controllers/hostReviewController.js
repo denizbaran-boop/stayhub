@@ -26,6 +26,14 @@ const createHostReview = async (req, res, next) => {
       return res.status(400).json({ error: 'You can only review completed or confirmed bookings' });
     }
 
+    // Reviews can only be left after the stay has ended
+    const checkOutDate = new Date(booking.check_out);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (checkOutDate > today) {
+      return res.status(400).json({ error: 'You can only review a stay after its check-out date' });
+    }
+
     const existing = await pool.query(
       'SELECT id FROM host_reviews WHERE booking_id = $1',
       [booking_id]

@@ -54,6 +54,10 @@ const GuestDashboard = () => {
 
   const formatDate = (d) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   const nightCount = (checkIn, checkOut) => Math.ceil((new Date(checkOut) - new Date(checkIn)) / 86400000);
+  const stayEnded = (checkOut) => {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    return new Date(checkOut) <= today;
+  };
 
   return (
     <div className="dashboard-page">
@@ -161,13 +165,18 @@ const GuestDashboard = () => {
                           {cancellingId === booking.id ? 'Cancelling...' : 'Cancel'}
                         </button>
                       )}
-                      {['completed', 'confirmed'].includes(booking.status) && !booking.review_id && (
+                      {['completed', 'confirmed'].includes(booking.status) && !booking.review_id && stayEnded(booking.check_out) && (
                         <button
                           onClick={() => setReviewingBooking(reviewingBooking === booking.id ? null : booking.id)}
                           className="btn btn-outline-primary btn-sm"
                         >
                           Leave Review
                         </button>
+                      )}
+                      {['completed', 'confirmed'].includes(booking.status) && !booking.review_id && !stayEnded(booking.check_out) && (
+                        <span style={{ fontSize: 12, color: 'var(--text-medium)' }}>
+                          Review opens after {formatDate(booking.check_out)}
+                        </span>
                       )}
                       {booking.review_id && (
                         <div className="reviewed-badge">

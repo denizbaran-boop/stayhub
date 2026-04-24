@@ -127,6 +127,10 @@ const HostDashboard = () => {
 
   const formatDate = (d) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   const nightCount = (c1, c2) => Math.ceil((new Date(c2) - new Date(c1)) / 86400000);
+  const stayEnded = (checkOut) => {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    return new Date(checkOut) <= today;
+  };
 
   return (
     <div className="dashboard-page">
@@ -289,13 +293,18 @@ const HostDashboard = () => {
                                 Mark Completed
                               </button>
                             )}
-                            {['completed', 'confirmed'].includes(booking.status) && !booking.host_review_id && (
+                            {['completed', 'confirmed'].includes(booking.status) && !booking.host_review_id && stayEnded(booking.check_out) && (
                               <button
                                 onClick={() => setReviewingGuestBooking(reviewingGuestBooking === booking.id ? null : booking.id)}
                                 className="btn btn-outline-primary btn-sm"
                               >
                                 Review Guest
                               </button>
+                            )}
+                            {['completed', 'confirmed'].includes(booking.status) && !booking.host_review_id && !stayEnded(booking.check_out) && (
+                              <span style={{ fontSize: 12, color: 'var(--text-medium)' }}>
+                                Opens after {formatDate(booking.check_out)}
+                              </span>
                             )}
                             {booking.host_review_id && (
                               <span style={{ fontSize: 12, color: 'var(--text-medium)' }}>

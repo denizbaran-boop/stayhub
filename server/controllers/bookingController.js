@@ -1,5 +1,6 @@
 const pool = require('../config/db');
 const { createNotification } = require('../services/notifier');
+const { bookingConfirmationEmail } = require('../services/mailer');
 
 // Long-stay discount: 10% for 7+ nights, 20% for 30+ nights
 function longStayDiscountRate(nights) {
@@ -396,10 +397,42 @@ const updateBookingStatus = async (req, res, next) => {
       }
     }
 
-    const result = await pool.query(
-      'UPDATE bookings SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
-      [status, id]
-    );
+    const client = await pool.connect();
+    let result;
+    try {
+      await client.query('BEGIN');
+
+      result = await client.query(
+        'UPDATE bookings SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+        [status, id]
+      );
+
+      // Side-effects on payments/payouts
+      if (status === 'confirmed') {
+        // Release held payouts (they become available to the host)
+        await client.query(
+          "UPDATE payouts SET status = 'pending' WHERE booking_id = $1 AND status = 'on_hold'",
+          [id]
+        );
+      } else if (status === 'rejected' || status === 'cancelled') {
+        // Refund any successful payment and cancel the held payout
+        await client.query(
+          "UPDATE payments SET status = 'refunded' WHERE booking_id = $1 AND status = 'succeeded'",
+          [id]
+        );
+        await client.query(
+          "DELETE FROM payouts WHERE booking_id = $1 AND status = 'on_hold'",
+          [id]
+        );
+      }
+
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
 
     // Notify the counterparty
     const titles = {
@@ -418,6 +451,38 @@ const updateBookingStatus = async (req, res, next) => {
       message: `Booking #${id.slice(0, 8)} is now ${status}.`,
       link: recipient === booking.host_id ? '/dashboard/host' : '/dashboard/guest',
     });
+
+    // Confirmation email on approval
+    if (status === 'confirmed') {
+      try {
+        const details = await pool.query(
+          `SELECT g.email as guest_email, g.first_name as g_first, g.last_name as g_last,
+             h.first_name as h_first, h.last_name as h_last,
+             p.title as property_title
+           FROM bookings b
+           JOIN users g ON g.id = b.guest_id
+           JOIN properties p ON p.id = b.property_id
+           JOIN users h ON h.id = p.host_id
+           WHERE b.id = $1`,
+          [id]
+        );
+        const d = details.rows[0];
+        if (d) {
+          await bookingConfirmationEmail({
+            guestEmail: d.guest_email,
+            guestName: `${d.g_first} ${d.g_last}`,
+            hostName: `${d.h_first} ${d.h_last}`,
+            propertyTitle: d.property_title,
+            bookingId: id,
+            checkIn: booking.check_in,
+            checkOut: booking.check_out,
+            totalPrice: booking.final_price,
+          });
+        }
+      } catch (err) {
+        console.error('[booking] confirmation email failed:', err.message);
+      }
+    }
 
     res.json(result.rows[0]);
   } catch (err) {
