@@ -8,6 +8,8 @@ import ReviewForm from '../components/ReviewForm';
 import MapView from '../components/MapView';
 import StarRating from '../components/StarRating';
 import InquiryForm from '../components/InquiryForm';
+import SaveToWishlistButton from '../components/SaveToWishlistButton';
+import HostReplyForm from '../components/HostReplyForm';
 import {
   FiMapPin, FiUsers, FiBriefcase, FiHome, FiStar,
   FiChevronLeft, FiChevronRight, FiX, FiShare2, FiHeart
@@ -87,7 +89,7 @@ const PropertyDetailPage = () => {
         </button>
         <div className="property-header-actions">
           <button className="header-action-btn"><FiShare2 size={16} /> Share</button>
-          <button className="header-action-btn"><FiHeart size={16} /> Save</button>
+          <SaveToWishlistButton propertyId={id} />
         </div>
       </div>
 
@@ -253,6 +255,30 @@ const PropertyDetailPage = () => {
                       </div>
                       <StarRating rating={review.rating} size={13} />
                       {review.comment && <p className="review-comment">{review.comment}</p>}
+
+                      {review.reply_text ? (
+                        <div className="host-reply-block">
+                          <div className="host-reply-meta">
+                            <strong>Response from {review.reply_host_first || property.host_first_name}</strong>
+                            <span className="review-date">
+                              {new Date(review.reply_created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                            </span>
+                          </div>
+                          <p className="review-comment">{review.reply_text}</p>
+                          {isOwner && (
+                            <HostReplyForm
+                              reviewId={review.id}
+                              existingReply={review.reply_text}
+                              onSaved={(t) => setReviews(rs => rs.map(r => r.id === review.id ? { ...r, reply_text: t, reply_created_at: new Date().toISOString() } : r))}
+                            />
+                          )}
+                        </div>
+                      ) : isOwner ? (
+                        <HostReplyForm
+                          reviewId={review.id}
+                          onSaved={(t) => setReviews(rs => rs.map(r => r.id === review.id ? { ...r, reply_text: t, reply_created_at: new Date().toISOString(), reply_host_first: user.first_name } : r))}
+                        />
+                      ) : null}
                     </div>
                   ))}
                 </div>
@@ -561,6 +587,14 @@ const PropertyDetailPage = () => {
         }
         .review-date { font-size: 12px; color: var(--text-medium); }
         .review-comment { font-size: 14px; line-height: 1.6; color: var(--text-medium); }
+        .host-reply-block {
+          margin-top: 8px; padding: 10px 12px; border-left: 3px solid var(--primary);
+          background: var(--bg-light); border-radius: var(--radius-sm);
+        }
+        .host-reply-meta {
+          display: flex; justify-content: space-between; align-items: center;
+          font-size: 13px; margin-bottom: 4px;
+        }
         .booking-sidebar { position: relative; }
         .owner-notice {
           text-align: center;

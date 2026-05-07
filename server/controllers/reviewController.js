@@ -79,9 +79,18 @@ const getPropertyReviews = async (req, res, next) => {
     const offset = (page - 1) * limit;
 
     const result = await pool.query(
-      `SELECT r.*, u.first_name, u.last_name, u.avatar_url
+      `SELECT r.*, u.first_name, u.last_name, u.avatar_url,
+         rr.id as reply_id,
+         rr.reply as reply_text,
+         rr.created_at as reply_created_at,
+         rr.host_id as reply_host_id,
+         hu.first_name as reply_host_first,
+         hu.last_name as reply_host_last,
+         hu.avatar_url as reply_host_avatar
        FROM reviews r
        JOIN users u ON u.id = r.guest_id
+       LEFT JOIN review_replies rr ON rr.review_id = r.id
+       LEFT JOIN users hu ON hu.id = rr.host_id
        WHERE r.property_id = $1
        ORDER BY r.created_at DESC
        LIMIT $2 OFFSET $3`,
@@ -126,4 +135,27 @@ const getUserReviews = async (req, res, next) => {
   }
 };
 
-module.exports = { createReview, getPropertyReviews, getUserReviews };
+// Reviews for all properties owned by the calling host (with reply status)
+const getHostInboundReviews = async (req, res, next) => {
+  try {
+    const result = await pool.query(
+      `SELECT r.*,
+         u.first_name, u.last_name, u.avatar_url,
+         p.title as property_title,
+         p.id as property_id,
+         rr.id as reply_id, rr.reply as reply_text, rr.created_at as reply_created_at
+       FROM reviews r
+       JOIN users u ON u.id = r.guest_id
+       JOIN properties p ON p.id = r.property_id
+       LEFT JOIN review_replies rr ON rr.review_id = r.id
+       WHERE p.host_id = $1
+       ORDER BY r.created_at DESC`,
+      [req.user.id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { createReview, getPropertyReviews, getUserReviews, getHostInboundReviews };

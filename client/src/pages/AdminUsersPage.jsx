@@ -57,6 +57,7 @@ const AdminUsersPage = () => {
         <div className="admin-nav">
           <Link to="/admin" className="admin-nav-link active">Users</Link>
           <Link to="/admin/revenue" className="admin-nav-link">Revenue</Link>
+          <Link to="/admin/disputes" className="admin-nav-link">Disputes</Link>
         </div>
         <h1 className="section-title">User Management ({total})</h1>
 

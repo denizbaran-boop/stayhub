@@ -24,6 +24,13 @@ import ManageAvailabilityPage from './pages/ManageAvailabilityPage';
 import MapSearchPage from './pages/MapSearchPage';
 import FeaturedPage from './pages/FeaturedPage';
 import SettingsPage from './pages/SettingsPage';
+import WishlistsPage from './pages/WishlistsPage';
+import WishlistDetailPage from './pages/WishlistDetailPage';
+import SeasonalPricingPage from './pages/SeasonalPricingPage';
+import MyDisputesPage from './pages/MyDisputesPage';
+import AdminDisputesPage from './pages/AdminDisputesPage';
+import HostOccupancyPage from './pages/HostOccupancyPage';
+import HostReviewsPage from './pages/HostReviewsPage';
 
 const ProtectedRoute = ({ children, requiredRole }) => {
   const { user, loading } = useAuth();
@@ -161,6 +168,63 @@ const AppRoutes = () => {
             <AdminRoute>
               <AdminRevenuePage />
             </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/disputes"
+          element={
+            <AdminRoute>
+              <AdminDisputesPage />
+            </AdminRoute>
+          }
+        />
+
+        <Route
+          path="/wishlists"
+          element={
+            <ProtectedRoute>
+              <WishlistsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/wishlists/:id"
+          element={
+            <ProtectedRoute>
+              <WishlistDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/disputes"
+          element={
+            <ProtectedRoute>
+              <MyDisputesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard/host/properties/:propertyId/seasonal-pricing"
+          element={
+            <ProtectedRoute requiredRole="host">
+              <SeasonalPricingPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard/host/occupancy"
+          element={
+            <ProtectedRoute requiredRole="host">
+              <HostOccupancyPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard/host/reviews"
+          element={
+            <ProtectedRoute requiredRole="host">
+              <HostReviewsPage />
+            </ProtectedRoute>
           }
         />
 

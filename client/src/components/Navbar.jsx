@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { FiMenu, FiUser, FiHome, FiLogOut, FiGrid, FiPlusSquare, FiMessageCircle, FiShield, FiStar } from 'react-icons/fi';
+import { FiMenu, FiUser, FiHome, FiLogOut, FiGrid, FiPlusSquare, FiMessageCircle, FiShield, FiStar, FiHeart, FiFlag } from 'react-icons/fi';
 import NotificationsBell from './NotificationsBell';
 
 const Navbar = () => {
@@ -119,6 +119,31 @@ const Navbar = () => {
                     >
                       <FiMessageCircle size={15} /> Inbox
                     </Link>
+                    {user.role !== 'admin' && (
+                      <Link
+                        to="/wishlists"
+                        onClick={() => setMenuOpen(false)}
+                        className="navbar-dropdown-item"
+                      >
+                        <FiHeart size={15} /> Wishlists
+                      </Link>
+                    )}
+                    <Link
+                      to="/disputes"
+                      onClick={() => setMenuOpen(false)}
+                      className="navbar-dropdown-item"
+                    >
+                      <FiFlag size={15} /> My Disputes
+                    </Link>
+                    {user.role === 'admin' && (
+                      <Link
+                        to="/admin/disputes"
+                        onClick={() => setMenuOpen(false)}
+                        className="navbar-dropdown-item"
+                      >
+                        <FiFlag size={15} /> Admin · Disputes
+                      </Link>
+                    )}
                     <Link
                       to={`/users/${user.id}`}
                       onClick={() => setMenuOpen(false)}

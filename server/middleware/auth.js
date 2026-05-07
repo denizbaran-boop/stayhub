@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const pool = require('../config/db');
+const { isRevoked, touchSession } = require('../services/sessions');
 
 const authenticate = async (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -16,7 +17,12 @@ const authenticate = async (req, res, next) => {
     if (result.rows[0].is_active === false) {
       return res.status(403).json({ error: 'Account is deactivated' });
     }
+    if (await isRevoked(token)) {
+      return res.status(401).json({ error: 'Session has been signed out' });
+    }
     req.user = result.rows[0];
+    // Fire-and-forget last-active update
+    touchSession(token);
     next();
   } catch (err) {
     return res.status(401).json({ error: 'Invalid token' });

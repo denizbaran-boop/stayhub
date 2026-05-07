@@ -18,6 +18,12 @@ const payoutRoutes = require('./routes/payouts');
 const hostReviewRoutes = require('./routes/hostReviews');
 const userRoutes = require('./routes/users');
 const adminRoutes = require('./routes/admin');
+const wishlistRoutes = require('./routes/wishlists');
+const seasonalPricingRoutes = require('./routes/seasonalPricing');
+const disputeRoutes = require('./routes/disputes');
+const occupancyRoutes = require('./routes/occupancy');
+const reviewReplyRoutes = require('./routes/reviewReplies');
+const sessionRoutes = require('./routes/sessions');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
@@ -42,6 +48,12 @@ app.use('/api/payouts', payoutRoutes);
 app.use('/api/host-reviews', hostReviewRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/wishlists', wishlistRoutes);
+app.use('/api/seasonal-pricing', seasonalPricingRoutes);
+app.use('/api/disputes', disputeRoutes);
+app.use('/api/occupancy', occupancyRoutes);
+app.use('/api/review-replies', reviewReplyRoutes);
+app.use('/api/sessions', sessionRoutes);
 
 app.get('/', (req, res) => res.json({
   name: 'StayHub API',

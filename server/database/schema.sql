@@ -189,6 +189,76 @@ CREATE TABLE IF NOT EXISTS host_reviews (
   UNIQUE(booking_id)
 );
 
+-- =========================================================
+-- Sprint 2 — additional feature tables
+-- =========================================================
+
+-- Custom Property Wishlists (guest saves properties to named lists)
+CREATE TABLE IF NOT EXISTS wishlists (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name VARCHAR(100) NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS wishlist_items (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  wishlist_id UUID NOT NULL REFERENCES wishlists(id) ON DELETE CASCADE,
+  property_id UUID NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
+  added_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(wishlist_id, property_id)
+);
+
+-- Seasonal Pricing (host overrides nightly price for date ranges)
+CREATE TABLE IF NOT EXISTS seasonal_pricing (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  property_id UUID NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
+  name VARCHAR(100) NOT NULL,
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  price_per_night DECIMAL(10,2) NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW(),
+  CHECK (end_date >= start_date)
+);
+
+-- Admin Dispute Resolution (guests/hosts report booking issues)
+CREATE TABLE IF NOT EXISTS disputes (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  booking_id UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+  reporter_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  reason VARCHAR(50) NOT NULL,
+  description TEXT NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'open' CHECK (status IN ('open','investigating','resolved','rejected')),
+  resolution_notes TEXT,
+  resolved_by UUID REFERENCES users(id),
+  resolved_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Host replies to guest reviews (one reply per review)
+CREATE TABLE IF NOT EXISTS review_replies (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  review_id UUID NOT NULL UNIQUE REFERENCES reviews(id) ON DELETE CASCADE,
+  host_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  reply TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Session & Device Management (active login sessions)
+CREATE TABLE IF NOT EXISTS user_sessions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token_hash VARCHAR(128) UNIQUE NOT NULL,
+  user_agent TEXT,
+  ip_address VARCHAR(64),
+  device_label VARCHAR(120),
+  last_active_at TIMESTAMP DEFAULT NOW(),
+  revoked BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_properties_host_id ON properties(host_id);
 CREATE INDEX IF NOT EXISTS idx_properties_city ON properties(city);
@@ -207,3 +277,12 @@ CREATE INDEX IF NOT EXISTS idx_conversations_host ON conversations(host_id);
 CREATE INDEX IF NOT EXISTS idx_payouts_host ON payouts(host_id);
 CREATE INDEX IF NOT EXISTS idx_payments_booking ON payments(booking_id);
 CREATE INDEX IF NOT EXISTS idx_host_reviews_guest ON host_reviews(guest_id);
+CREATE INDEX IF NOT EXISTS idx_wishlists_user ON wishlists(user_id);
+CREATE INDEX IF NOT EXISTS idx_wishlist_items_wishlist ON wishlist_items(wishlist_id);
+CREATE INDEX IF NOT EXISTS idx_seasonal_pricing_property ON seasonal_pricing(property_id);
+CREATE INDEX IF NOT EXISTS idx_seasonal_pricing_dates ON seasonal_pricing(property_id, start_date, end_date);
+CREATE INDEX IF NOT EXISTS idx_disputes_status ON disputes(status);
+CREATE INDEX IF NOT EXISTS idx_disputes_booking ON disputes(booking_id);
+CREATE INDEX IF NOT EXISTS idx_review_replies_review ON review_replies(review_id);
+CREATE INDEX IF NOT EXISTS idx_user_sessions_user ON user_sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_sessions_token ON user_sessions(token_hash);

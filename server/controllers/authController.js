@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const pool = require('../config/db');
 const { passwordResetEmail, twoFactorEmail } = require('../services/mailer');
+const { recordSession } = require('../services/sessions');
 
 const generateToken = (userId) => {
   return jwt.sign(
@@ -70,6 +71,8 @@ const register = async (req, res, next) => {
     const user = result.rows[0];
     const token = generateToken(user.id);
 
+    try { await recordSession(user.id, token, req); } catch (e) { console.error('[auth] session record failed:', e.message); }
+
     res.status(201).json({ token, user });
   } catch (err) {
     next(err);
@@ -129,6 +132,8 @@ const login = async (req, res, next) => {
     const token = generateToken(user.id);
     const { password_hash, ...userWithoutPassword } = user;
 
+    try { await recordSession(user.id, token, req); } catch (e) { console.error('[auth] session record failed:', e.message); }
+
     res.json({ token, user: userWithoutPassword });
   } catch (err) {
     next(err);
@@ -170,6 +175,7 @@ const verifyTwoFactor = async (req, res, next) => {
     );
     const user = userResult.rows[0];
     const token = generateToken(user.id);
+    try { await recordSession(user.id, token, req); } catch (e) { console.error('[auth] session record failed:', e.message); }
     res.json({ token, user });
   } catch (err) {
     next(err);

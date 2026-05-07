@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import api from '../api/axios';
 import StarRating from '../components/StarRating';
 import HostReviewForm from '../components/HostReviewForm';
-import { FiPlus, FiEdit, FiTrash2, FiCheck, FiX, FiHome, FiCalendar, FiTag, FiUsers, FiDollarSign, FiBarChart2, FiCreditCard, FiLock } from 'react-icons/fi';
+import { FiPlus, FiEdit, FiTrash2, FiCheck, FiX, FiHome, FiCalendar, FiTag, FiUsers, FiDollarSign, FiBarChart2, FiCreditCard, FiLock, FiTrendingUp, FiMessageSquare } from 'react-icons/fi';
 
 const BOOKING_STATUS_TABS = ['all', 'pending', 'confirmed', 'completed', 'cancelled', 'rejected'];
 
@@ -146,6 +146,12 @@ const HostDashboard = () => {
             </Link>
             <Link to="/dashboard/host/earnings" className="btn btn-secondary">
               <FiBarChart2 size={14} /> Earnings
+            </Link>
+            <Link to="/dashboard/host/occupancy" className="btn btn-secondary">
+              <FiTrendingUp size={14} /> Occupancy
+            </Link>
+            <Link to="/dashboard/host/reviews" className="btn btn-secondary">
+              <FiMessageSquare size={14} /> Reviews
             </Link>
             <Link to="/inbox" className="btn btn-secondary">
               Inbox
@@ -374,6 +380,9 @@ const HostDashboard = () => {
                             </Link>
                             <Link to={`/dashboard/host/properties/${property.id}/availability`} className="btn btn-secondary btn-sm">
                               <FiLock size={13} /> Dates
+                            </Link>
+                            <Link to={`/dashboard/host/properties/${property.id}/seasonal-pricing`} className="btn btn-secondary btn-sm">
+                              <FiTag size={13} /> Pricing
                             </Link>
                             <button
                               onClick={() => handleDeleteProperty(property.id)}

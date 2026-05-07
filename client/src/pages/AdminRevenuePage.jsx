@@ -33,6 +33,7 @@ const AdminRevenuePage = () => {
         <div className="admin-nav">
           <Link to="/admin" className="admin-nav-link">Users</Link>
           <Link to="/admin/revenue" className="admin-nav-link active">Revenue</Link>
+          <Link to="/admin/disputes" className="admin-nav-link">Disputes</Link>
         </div>
 
         <h1 className="section-title">Platform Revenue Report</h1>

@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import api from '../api/axios';
 import ReviewForm from '../components/ReviewForm';
 import StarRating from '../components/StarRating';
+import ReportIssueButton from '../components/ReportIssueButton';
 import { FiMapPin, FiCalendar, FiUsers, FiTag, FiHome } from 'react-icons/fi';
 
 const STATUS_TABS = ['all', 'pending', 'confirmed', 'completed', 'cancelled'];
@@ -182,6 +183,9 @@ const GuestDashboard = () => {
                         <div className="reviewed-badge">
                           <StarRating rating={booking.review_rating} size={13} /> Reviewed
                         </div>
+                      )}
+                      {['confirmed', 'completed'].includes(booking.status) && (
+                        <ReportIssueButton bookingId={booking.id} />
                       )}
                     </div>
                   </div>

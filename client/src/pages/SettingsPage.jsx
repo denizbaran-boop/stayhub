@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../api/axios';
-import { FiShield, FiCheck } from 'react-icons/fi';
+import { FiShield, FiCheck, FiMonitor, FiLogOut } from 'react-icons/fi';
 
 const SettingsPage = () => {
   const { user } = useAuth();
@@ -11,13 +11,49 @@ const SettingsPage = () => {
   const [passwordForm, setPasswordForm] = useState({ current_password: '', new_password: '', confirm: '' });
   const [pwMessage, setPwMessage] = useState('');
   const [pwError, setPwError] = useState('');
+  const [sessions, setSessions] = useState([]);
+  const [sessionMsg, setSessionMsg] = useState('');
+
+  const loadSessions = async () => {
+    try {
+      const res = await api.get('/sessions');
+      setSessions(res.data);
+    } catch {
+      // ignore
+    }
+  };
 
   useEffect(() => {
     (async () => {
       const res = await api.get('/auth/profile');
       setTwoFA(!!res.data.two_factor_enabled);
+      await loadSessions();
     })();
   }, []);
+
+  const revoke = async (id) => {
+    if (!window.confirm('Sign out this device?')) return;
+    setSessionMsg('');
+    try {
+      await api.delete(`/sessions/${id}`);
+      setSessionMsg('Device signed out.');
+      loadSessions();
+    } catch (err) {
+      setSessionMsg(err.response?.data?.error || 'Failed');
+    }
+  };
+
+  const revokeOthers = async () => {
+    if (!window.confirm('Sign out from all other devices?')) return;
+    setSessionMsg('');
+    try {
+      const res = await api.delete('/sessions/others');
+      setSessionMsg(`Signed out ${res.data.revoked_count} other device${res.data.revoked_count === 1 ? '' : 's'}.`);
+      loadSessions();
+    } catch (err) {
+      setSessionMsg(err.response?.data?.error || 'Failed');
+    }
+  };
 
   const toggle2FA = async () => {
     setSaving(true);
@@ -76,6 +112,44 @@ const SettingsPage = () => {
         </div>
 
         <div className="settings-card">
+          <h3><FiMonitor size={16} /> Active Sessions</h3>
+          <p className="settings-desc">
+            These are the devices currently signed in to your account. Sign out any session you don't recognize.
+          </p>
+          {sessionMsg && <div className="alert alert-info">{sessionMsg}</div>}
+          {sessions.length === 0 ? (
+            <p className="settings-desc">No sessions found.</p>
+          ) : (
+            <ul className="session-list">
+              {sessions.map(s => (
+                <li key={s.id} className={`session-row ${s.revoked ? 'session-revoked' : ''}`}>
+                  <div>
+                    <div className="session-label">
+                      {s.device_label || 'Unknown device'}
+                      {s.is_current && <span className="session-tag">This device</span>}
+                      {s.revoked && <span className="session-tag session-tag-rev">Revoked</span>}
+                    </div>
+                    <div className="session-meta">
+                      {s.ip_address ? `${s.ip_address} · ` : ''}Last active {new Date(s.last_active_at).toLocaleString()}
+                    </div>
+                  </div>
+                  {!s.is_current && !s.revoked && (
+                    <button className="btn btn-secondary btn-sm" onClick={() => revoke(s.id)}>
+                      <FiLogOut size={13} /> Sign out
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+          {sessions.filter(s => !s.is_current && !s.revoked).length > 0 && (
+            <button className="btn btn-danger" onClick={revokeOthers} style={{ marginTop: 12 }}>
+              Sign out everywhere else
+            </button>
+          )}
+        </div>
+
+        <div className="settings-card">
           <h3>Change Password</h3>
           {pwMessage && <div className="alert alert-success">{pwMessage}</div>}
           {pwError && <div className="alert alert-error">{pwError}</div>}
@@ -125,6 +199,21 @@ const SettingsPage = () => {
         }
         .settings-card h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
         .settings-desc { font-size: 14px; color: var(--text-medium); margin-bottom: 14px; }
+        .session-list { list-style: none; padding: 0; margin: 0 0 14px; display: flex; flex-direction: column; gap: 8px; }
+        .session-row {
+          display: flex; justify-content: space-between; align-items: center; gap: 10px;
+          padding: 12px; border: 1px solid var(--border-light); border-radius: var(--radius-sm);
+        }
+        .session-revoked { opacity: 0.55; }
+        .session-label { font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+        .session-tag {
+          font-size: 11px; background: #28a745; color: white;
+          padding: 2px 8px; border-radius: var(--radius-full); font-weight: 700;
+          text-transform: uppercase; letter-spacing: 0.4px;
+        }
+        .session-tag-rev { background: #6c757d; }
+        .session-meta { font-size: 12px; color: var(--text-medium); margin-top: 2px; }
+        .btn-sm { padding: 6px 12px; font-size: 13px; }
       `}</style>
     </div>
   );
